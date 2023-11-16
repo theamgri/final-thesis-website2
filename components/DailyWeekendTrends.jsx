@@ -20,11 +20,13 @@ const DailyWeekendTrends = () => {
         };
       });
   
-      const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Assuming Monday is the start of the week
-      const currentWeekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      console.log('All Timestamp Data:', data);
+  
+      const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 }); // Sunday is the start of the week
+      const currentWeekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
   
       const filteredData = data.filter((entry) =>
-        isWithinInterval(entry.timestamp, { start: currentWeekStart, end: currentWeekEnd })
+      isWithinInterval(entry.timestamp, { start: currentWeekStart, end: currentWeekEnd })
       );
   
       const sortedData = filteredData.sort((a, b) => a.timestamp - b.timestamp);
@@ -67,10 +69,18 @@ const DailyWeekendTrends = () => {
   }, []); // Run once when the component mounts
 
 
-
+  const labels = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+  ];
   useEffect(() => {
     console.log('Timestamp Data:', timestampData);
-
+  
     if (timestampData.length > 0 && chartRef.current) {
       try {
         const ctx = chartRef.current.getContext('2d');
@@ -78,33 +88,32 @@ const DailyWeekendTrends = () => {
           console.error('Unable to get chart context.');
           return;
         }
-
-        const labels = timestampData.map((entry) => identifyDay(entry.timestamp));
-
-        const toxicityScores = timestampData.map((entry) => entry.TOXCITY_SCORE);
-
-        console.log('Labels:', labels);
-        console.log('Toxicity Scores:', toxicityScores);
-
+  
+        const datasets = labels.map((day, dayIndex) => {
+          const dayData = timestampData
+            .filter((entry) => identifyDay(entry.timestamp) === day)
+            .map((entry) => entry.TOXCITY_SCORE);
+  
+          return {
+            label: `${day} Toxicity Scores Progress`,
+            data: dayData,
+            backgroundColor: dayData.map((score) =>
+              score > 0.5 ? 'rgba(255, 99, 132, 0.5)' : 'rgba(75, 192, 192, 0.5)'
+            ),
+            borderColor: dayData.map((score) =>
+              score > 0.5 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
+            ),
+            borderWidth: 1,
+          };
+        });
+  
         const data = {
           labels: labels,
-          datasets: [
-            {
-              label: 'Toxicity Scores Progress',
-              data: toxicityScores,
-              backgroundColor: toxicityScores.map((score) =>
-                score > 0.5 ? 'rgba(255, 99, 132, 0.5)' : 'rgba(75, 192, 192, 0.5)'
-              ),
-              borderColor: toxicityScores.map((score) =>
-                score > 0.5 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
-              ),
-              borderWidth: 1,
-            },
-          ],
+          datasets: datasets,
         };
-
+  
         console.log('Data:', data);
-
+  
         if (!chart) {
           const newChart = new Chart(ctx, {
             type: 'bar',
@@ -127,21 +136,20 @@ const DailyWeekendTrends = () => {
                       return tooltipItem[0].label;
                     },
                     label: function (context) {
-                      return `Toxicity Score: ${context.dataset.data[context.dataIndex]}`;
+                      const dataset = context.dataset.data;
+                      return `Toxicity Score: ${dataset[context.dataIndex]}`;
                     },
                   },
                 },
               },
             },
           });
-
+  
           console.log('Chart created:', newChart);
           setChart(newChart);
         } else {
-          chart.data.labels = labels;
-          chart.data.datasets[0].data = toxicityScores;
-          chart.data.datasets[0].backgroundColor = data.datasets[0].backgroundColor;
-          chart.data.datasets[0].borderColor = data.datasets[0].borderColor;
+          chart.data.labels = data.labels;
+          chart.data.datasets = data.datasets;
           chart.update();
           console.log('Chart updated:', chart);
         }

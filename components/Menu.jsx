@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReportsPage from '../components/ReportsPage'; 
 import { db } from './firebase.jsx';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 const Menu = () => {
   const [isFocusVisible, setIsFocusVisible] = useState(false);
