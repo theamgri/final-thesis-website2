@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import { collection, getDocs } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { db } from './firebase';
 
 const DailyWeekendTrends = () => {
@@ -20,6 +20,7 @@ const DailyWeekendTrends = () => {
         };
       });
 
+      console.log('Fetched Data:', data);
       setTimestampData(data);
     } catch (error) {
       console.error('Error fetching timestamp data:', error);
@@ -39,8 +40,38 @@ const DailyWeekendTrends = () => {
     return daysOfWeek.slice(startOfWeekIndex).concat(daysOfWeek.slice(0, startOfWeekIndex));
   };
 
+  const groupDataByDay = (data) => {
+    const groupedData = {};
+    data.forEach((entry) => {
+      const day = identifyDay(entry.timestamp);
+      if (!groupedData[day]) {
+        groupedData[day] = [];
+      }
+      groupedData[day].push(entry.TOXCITY_SCORE);
+    });
+
+    return groupedData;
+  };
+
+  const calculateAverageToxicity = (groupedData) => {
+    const averages = {};
+    for (const day in groupedData) {
+      const scores = groupedData[day];
+      const average = scores.reduce((acc, score) => acc + score, 0) / scores.length;
+      averages[day] = average;
+    }
+    return averages;
+  };
+
   useEffect(() => {
     fetchData();
+
+    const intervalId = setInterval(() => {
+      fetchData(); // Fetch data periodically (e.g., every 10 minutes)
+    }, 600000); 
+
+    return () => clearInterval(intervalId);
+    
   }, []); // Run once when the component mounts
 
   useEffect(() => {
@@ -53,22 +84,17 @@ const DailyWeekendTrends = () => {
         }
 
         const weekLabels = generateWeekLabels();
-        const labels = timestampData.map((entry) => identifyDay(entry.timestamp));
-        const toxicityScores = timestampData.map((entry) => entry.TOXCITY_SCORE);
-        console.log('Toxicity Scores:', toxicityScores);
+        const groupedData = groupDataByDay(timestampData);
+        const averages = calculateAverageToxicity(groupedData);
 
         const data = {
-          labels: labels,
+          labels: Object.keys(averages),
           datasets: [
             {
-              label: 'Toxicity Scores Progress',
-              data: toxicityScores,
-              backgroundColor: toxicityScores.map((score) =>
-                score > 0.5 ? 'rgba(255, 99, 132, 0.5)' : 'rgba(75, 192, 192, 0.5)'
-              ),
-              borderColor: toxicityScores.map((score) =>
-                score > 0.5 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'
-              ),
+              label: 'Average Toxicity Score',
+              data: Object.values(averages),
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              borderColor: 'rgba(75, 192, 192, 1)',
               borderWidth: 1,
             },
           ],
@@ -97,7 +123,7 @@ const DailyWeekendTrends = () => {
                       return tooltipItem[0].label;
                     },
                     label: function (context) {
-                      return `Toxicity Score: ${context.dataset.data[context.dataIndex]}`;
+                      return `Average Toxicity Score: ${context.dataset.data[context.dataIndex]}`;
                     },
                   },
                 },
@@ -107,8 +133,8 @@ const DailyWeekendTrends = () => {
 
           setChart(newChart);
         } else {
-          chart.data.labels = labels;
-          chart.data.datasets[0].data = toxicityScores;
+          chart.data.labels = data.labels;
+          chart.data.datasets[0].data = data.datasets[0].data;
           chart.data.datasets[0].backgroundColor = data.datasets[0].backgroundColor;
           chart.data.datasets[0].borderColor = data.datasets[0].borderColor;
           chart.update();
