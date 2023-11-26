@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import { db } from '../components/firebase.jsx';
 import ReportsPage from '../components/ReportsPage';
 import DailyWeekendTrends from '../components/DailyWeekendTrends';
+import DailyMonthlyTrends from '../components/DailyMonthlyTrends';
 import SentimentAnalysis from '@/components/SentimentAnalysis';
 import Overview from '@/components/Overview';
 
@@ -32,6 +33,9 @@ export default function Home() {
           <div className="flex flex-wrap">
             <div className="w-full md:w-1/2 p-2">
               <DailyWeekendTrends />
+            </div>
+            <div className="w-full md:w-1/2 p-2">
+              <DailyMonthlyTrends />
             </div>
             <div className="w-full md:w-1/2 p-2">
               <SentimentAnalysis />

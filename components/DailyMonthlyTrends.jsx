@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import { collection, getDocs } from 'firebase/firestore';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { db } from './firebase';
 
-const DailyWeekendTrends = () => {
+const DailyMonthTrends = () => {
   const [timestampData, setTimestampData] = useState([]);
   const [chart, setChart] = useState(null);
   const chartRef = useRef(null);
@@ -12,57 +12,23 @@ const DailyWeekendTrends = () => {
   const fetchData = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'tweets'));
-      const data = querySnapshot.docs.map((doc) => {
-        const entry = doc.data();
-        return {
-          timestamp: entry.timestamp.toDate(),
-          TOXCITY_SCORE: entry.TOXCITY_SCORE,
-        };
-      });
+      const data = querySnapshot.docs.map((doc) => ({
+        timestamp: doc.data().timestamp.toDate(),
+      }));
 
+      // Filter data for the current month
       const currentDate = new Date();
-      const startOfWeekDate = startOfWeek(currentDate);
-      const endOfWeekDate = endOfWeek(currentDate);
-
-      // Filter data for the current week
+      const startOfMonthDate = startOfMonth(currentDate);
+      const endOfMonthDate = endOfMonth(currentDate);
       const filteredData = data.filter(
-        (entry) => entry.timestamp >= startOfWeekDate && entry.timestamp <= endOfWeekDate
+        (entry) => entry.timestamp >= startOfMonthDate && entry.timestamp <= endOfMonthDate
       );
 
-      console.log('Fetched Data for the current week:', filteredData);
+      console.log('Fetched Data:', filteredData);
       setTimestampData(filteredData);
     } catch (error) {
       console.error('Error fetching timestamp data:', error);
     }
-  };
-
-  const identifyDay = (timestamp) => {
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const dayIndex = timestamp.getDay();
-    return daysOfWeek[dayIndex];
-  };
-
-  const generateWeekLabels = (startOfWeekDate) => {
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const startOfWeekIndex = startOfWeekDate.getDay();
-    return daysOfWeek.slice(startOfWeekIndex).concat(daysOfWeek.slice(0, startOfWeekIndex));
-  };
-
-  const groupDataByDay = (data) => {
-    const groupedData = {};
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  
-    // Initialize the count to 0 for each day of the week
-    daysOfWeek.forEach(day => {
-      groupedData[day] = 0;
-    });
-  
-    data.forEach((entry) => {
-      const day = identifyDay(entry.timestamp);
-      groupedData[day]++;
-    });
-  
-    return groupedData;
   };
 
   useEffect(() => {
@@ -84,16 +50,15 @@ const DailyWeekendTrends = () => {
           return;
         }
 
-        const startOfWeekDate = startOfWeek(new Date());
-        const weekLabels = generateWeekLabels(startOfWeekDate);
-        const groupedData = groupDataByDay(timestampData);
+        const monthLabel = format(new Date(), 'MMMM yyyy');
+        const totalDaysWithData = timestampData.length;
 
         const data = {
-          labels: Object.keys(groupedData),
+          labels: [monthLabel],
           datasets: [
             {
-              label: 'Total Inputs in a Day',
-              data: Object.values(groupedData),
+              label: 'Total Days with Data',
+              data: [totalDaysWithData],
               backgroundColor: 'rgba(75, 192, 192, 0.5)',
               borderColor: 'rgba(75, 192, 192, 1)',
               borderWidth: 1,
@@ -109,12 +74,12 @@ const DailyWeekendTrends = () => {
               scales: {
                 x: {
                   stacked: true,
-                  labels: weekLabels, // Set the custom labels
+                  labels: [monthLabel], // Set the custom labels
                 },
                 y: {
                   stacked: true,
                   beginAtZero: true,
-                  suggestedMax: Math.max(...Object.values(groupedData)) + 1, // Adjust the scale
+                  suggestedMax: totalDaysWithData + 1, // Add some padding for better visualization
                 },
               },
               plugins: {
@@ -124,7 +89,7 @@ const DailyWeekendTrends = () => {
                       return tooltipItem[0].label;
                     },
                     label: function (context) {
-                      return `Total Inputs: ${context.dataset.data[context.dataIndex]}`;
+                      return `Total Days with Data: ${context.dataset.data[context.dataIndex]}`;
                     },
                   },
                 },
@@ -148,10 +113,10 @@ const DailyWeekendTrends = () => {
 
   return (
     <div className="w-full">
-      <h2>Daily Weekend Trends</h2>
+      <h2>Daily Month Trends</h2>
       <canvas ref={chartRef} width="800" height="400"></canvas>
     </div>
   );
 };
 
-export default DailyWeekendTrends;
+export default DailyMonthTrends;
