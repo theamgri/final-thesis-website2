@@ -41,9 +41,11 @@ export default function Home() {
               <SentimentAnalysis />
             </div>
             <div className="w-full md:w-1/2 p-2">
+          {/* <Menu /> */}
+        </div>
+        <div className="w-full md:w-full p-2">
           <Menu />
         </div>
-
           </div> 
         </div>
       </div>
